@@ -1,0 +1,508 @@
+#install dependeces
+command: npm i --save express body-parser 
+npm i --save-dev nodemon
+npm i --save express-graphql graphql
+
+
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const { graphqlHTTP } = require("express-graphql"); 
+const { buildSchema } = require("graphql");
+
+const port = 3001;
+const app = express();
+
+app.use(bodyParser.json());
+
+const schema = buildSchema(`
+    type Event {
+        _id: ID!
+        titile: String!
+        description: String!
+        price: Float!
+        date: String! 
+    }
+
+    type RootQuery {
+        events: [String!]!
+    }
+
+    type RootMutation {
+        createEvent(name: String): String
+    }
+
+    schema {
+        query: RootQuery
+        mutation: RootMutation
+    }
+`);
+
+const rootValue = {
+    events: () => {
+        return ['Romantic Cooking', 'Sailing', 'All Night Coding'];
+    },
+    createEvent: (args) => {
+        const eventName = args.name;
+        return eventName;
+    }
+};
+
+app.use("/graphql", graphqlHTTP({
+    schema: schema,
+    rootValue: rootValue,
+    graphiql: true 
+}));
+
+app.listen(port, () => {
+    console.log("Connecté au port : " + port);
+});
+
+# graphql
+query {
+  events
+}
+
+mutation {
+  createEvent(name: "Sports")
+}
+
+# ---
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const { graphqlHTTP } = require("express-graphql"); 
+const { buildSchema } = require("graphql");
+
+const port = 3001;
+const app = express();
+
+const events = [];
+
+app.use(bodyParser.json());
+
+const schema = buildSchema(`
+    type Event {
+        _id: ID!
+        title: String!
+        description: String!
+        price: Float!
+        date: String! 
+    }
+
+    input EventInput {
+        title: String!
+        description: String!
+        price: Float!
+        date: String!
+    }
+
+    type RootQuery {
+        events: [Event!]!
+    }
+
+    type RootMutation {
+        createEvent(eventinput: EventInput): Event
+    }
+
+    schema {
+        query: RootQuery
+        mutation: RootMutation
+    }
+`);
+
+const rootValue = {
+    events: () => {
+        return events;
+    },
+    createEvent: (args) => {
+        const event = {
+            _id: Math.random().toString(),
+            title: args.title,
+            description: args.description,
+            price: +args.price,
+            date: new Date().toISOString()
+        }
+        events.push(event);
+    }
+};
+
+app.use("/graphql", graphqlHTTP({
+    schema: schema,
+    rootValue: rootValue,
+    graphiql: true 
+}));
+
+app.listen(port, () => {
+    console.log("Connecté au port : " + port);
+});
+
+# graphql
+
+query {
+  events {
+    title
+    price 
+  }
+}
+
+mutation {
+  createEvent(
+    eventInput: {
+      title: "A test", 
+      description: "Description", 
+      price: 9.99, 
+      date: "2023-11-20T07:55:16.908Z"
+    }
+  ) {
+    _id
+    title
+    description
+    price
+    date
+  }
+}
+
+query {
+  events {
+    _id
+    title
+    description
+    price
+    date
+  }
+}
+
+---
+
+npm i --save mongoose
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const { graphqlHTTP } = require("express-graphql");
+const { buildSchema } = require("graphql");
+const mongoose = require("mongoose");
+
+const Event = require("./models/event");
+
+const port = 3001;
+const app = express();
+
+app.use(bodyParser.json());
+
+const schema = buildSchema(`
+    type Event {
+        _id: ID!
+        title: String!
+        description: String!
+        price: Float!
+        date: String!
+    }
+
+    input EventInput {
+        title: String!
+        description: String!
+        price: Float!
+        date: String!
+    }
+
+    type RootQuery {
+        events: [Event!]!
+    }
+
+    type RootMutation {
+        createEvent(eventInput: EventInput): Event
+    }
+
+    schema {
+        query: RootQuery
+        mutation: RootMutation
+    }
+`);
+
+const rootValue = {
+    events: () => {
+        return Event
+            .find()
+            .then(events => {
+                return events.map(event => {
+                    return { ...event._doc, _id: event._doc._id.toString() };
+                });
+            })
+            .catch(err => {
+                throw err;
+        });
+    },
+    createEvent: (args) => {
+        const event = new Event({
+            title: args.eventInput.title,
+            description: args.eventInput.description,
+            price: +args.eventInput.price,
+            date: new Date(args.eventInput.date)
+        });
+        
+        return event
+            .save()
+            .then(result => {
+                console.log(result);
+                return { ...result._doc, _id: result._doc._id.toString() };
+        }).catch(err => {
+            console.log(err);
+            throw err;
+        });
+    }
+};
+
+app.use("/graphql", graphqlHTTP({
+    schema: schema,
+    rootValue: rootValue,
+    graphiql: true
+}));
+
+mongoose.connect(`mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.4kvyfru.mongodb.net/${process.env.MONGO_DB}`).then(() => {
+    app.listen(port, () => {
+        console.log("Connecté au port : " + port);
+    });    
+}).catch(err => console.log(err)) 
+
+# graphql
+
+mutation {
+  createEvent(eventInput: {
+    title: "Title",
+    description: "Description",
+    price: 9.99,
+    date: "2023-11-20T10:20:51.844Z"
+  })
+  {
+    _id
+    title
+    description
+    price
+    date
+  }
+}
+
+query {
+  events {
+    _id,
+    title,
+    description,
+    price,
+    date
+  }
+}
+
+---
+
+npm i --save bcryptjs
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const { graphqlHTTP } = require("express-graphql");
+const { buildSchema } = require("graphql");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+
+const Event = require("./models/event");
+const User = require("./models/user");
+
+const port = 3001;
+const app = express();
+
+app.use(bodyParser.json());
+
+const schema = buildSchema(`
+    type Event {
+        _id: ID!
+        title: String!
+        description: String!
+        price: Float!
+        date: String!
+    }
+
+    type User {
+        _id: ID!
+        email: String!
+        password: String!
+    }
+
+    input EventInput {
+        title: String!
+        description: String!
+        price: Float!
+        date: String!
+    }
+
+    input UserInput {
+        email: String!
+        password: String!
+    }
+
+    type RootQuery {
+        events: [Event!]!
+    }
+
+    type RootMutation {
+        createEvent(eventInput: EventInput): Event
+        createUser(userInput: UserInput): User
+    }
+
+    schema {
+        query: RootQuery
+        mutation: RootMutation
+    }
+`);
+
+const rootValue = {
+    events: () => {
+        return Event
+            .find()
+            .then(events => {
+                return events.map(event => {
+                    return { ...event._doc, _id: event.id };
+                });
+            })
+            .catch(err => {
+                throw err;
+        });
+    },
+    createEvent: args => {
+        const event = new Event({
+            title: args.eventInput.title,
+            description: args.eventInput.description,
+            price: +args.eventInput.price,
+            date: new Date(args.eventInput.date)
+        });
+        
+        return event
+            .save()
+            .then(result => {
+                console.log(result);
+                return { ...result._doc, _id: result.id };
+            })
+            .catch(err => {
+                console.log(err);
+                throw err;
+            });
+    },
+    createUser: args => {
+        return bcrypt
+            .hash(args.userInput.password, 12)
+            .then(hashedPassword => {
+                const user = new User({
+                    email: args.userInput.email,
+                    password: args.userInput.password
+                });
+
+                return user.save();
+            })
+            .then(result => {
+                return { ...result._doc, _id: result.id }
+            })
+            .catch(err => {
+                throw err;
+            });
+    }
+};
+
+app.use("/graphql", graphqlHTTP({
+    schema: schema,
+    rootValue: rootValue,
+    graphiql: true
+}));
+
+mongoose
+    .connect(`mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.4kvyfru.mongodb.net/${process.env.MONGO_DB}`)
+    .then(() => {
+        app.listen(port, () => {
+            console.log("Connecté au port : " + port);
+        });    
+    })
+    .catch(err => console.log(err)) 
+
+# graphql
+
+mutation {
+  createUser(userInput: {
+    email: "luc@gmail.com",
+    password: "lucjean1"
+  })
+  {
+    _id,
+    email,
+    password
+  }
+}
+
+
+
+
+// -----------------------
+query {
+    events {
+      title,
+      creator {
+        _id,
+        email,
+        password,
+        createdEvents {
+          title
+        }
+      }
+    }
+  }
+
+  query {
+    events {
+      _id,
+      title,
+      description,
+      price,
+      date,
+      creator {
+        email,
+         createdEvents {
+          title
+        }
+      }
+    }
+  }
+
+
+
+  ---------------------
+  mutation {
+    createUser(userInput: {
+      email:"luc@gmail.com",
+      password:"lucjean1"
+    })
+    {
+      _id,
+      email,
+      password
+    }
+  }
+
+  mutation {
+    createEvent(eventInput: {
+      title: "Titre",
+      description: "Description",
+      price: 125.2,
+      date: "2023-11-21T08:49:08.172Z"
+    })
+    {
+      _id,
+      title,
+      description,
+      price,
+      date
+    }
+  }
+  
+  
+
+
+
+
+

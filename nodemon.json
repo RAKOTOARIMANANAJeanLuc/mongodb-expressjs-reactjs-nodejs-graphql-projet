@@ -1,0 +1,7 @@
+{
+    "env": {
+        "MONGO_USER": "jeanlucrakotoarimanana461",
+        "MONGO_PASSWORD": "EaONAmQOqhPIHGQU",
+        "MONGO_DB": "graphql-reactjs-nodejs-mongodb-projet"
+    }
+}
