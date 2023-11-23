@@ -502,7 +502,13 @@ query {
   
   
 
+  booking
 
-
+  mutation {
+    bookEvent(eventId: "655c70a9dcb77cd991b7f7dd") {
+      _id,
+      createdAt
+    }
+  }
 
 
